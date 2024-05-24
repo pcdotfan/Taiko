@@ -69,7 +69,7 @@ read -p "请输入BlockPI holesky HTTP链接: " l1_endpoint_http
 
 read -p "请输入BlockPI holesky WS链接: " l1_endpoint_ws
 
-read -p "请输入Beacon Holskey RPC（如果你没有搭建的话，请输入:https://ethereum-holesky-beacon-api.publicnode.com即可）链接: " l1_beacon_http
+read -p "请输入Beacon Holskey RPC（如果你没有搭建的话，请输入:http://195.201.170.121:5052或者http://188.40.51.249:5052即可）链接: " l1_beacon_http
 
 read -p "请输入Prover RPC 链接(目前可用任意选一个:http://kenz-prover.hekla.kzvn.xyz:9876或者http://hekla.stonemac65.xyz:9876): " prover_endpoints
 
@@ -144,14 +144,49 @@ sed -i "s|PORT_PROVER_SERVER=.*|PORT_PROVER_SERVER=${port_prover_server}|" .env
 sed -i "s|PORT_PROMETHEUS=.*|PORT_PROMETHEUS=${port_prometheus}|" .env
 sed -i "s|PORT_GRAFANA=.*|PORT_GRAFANA=${port_grafana}|" .env
 sed -i "s|BLOCK_PROPOSAL_FEE=.*|BLOCK_PROPOSAL_FEE=30|" .env
+sed -i 's/${PORT_L2_EXECUTION_ENGINE_P2P}:${PORT_L2_EXECUTION_ENGINE_P2P}/${PORT_L2_EXECUTION_ENGINE_P2P}:30303/g' docker-compose.yml
+sed -i 's/${PORT_L2_EXECUTION_ENGINE_P2P}:${PORT_L2_EXECUTION_ENGINE_P2P}\/udp/${PORT_L2_EXECUTION_ENGINE_P2P}:30303\/udp/g' docker-compose.yml
+sed -i "s|BOOT_NODES=.*|BOOT_NODES=enode://2f7ee605f84362671e7d7c6d47b69a3358b0d87e9ba4648befcae8b19453275ed19059db347c459384c1a3e5486419233c06bf6c4c6f489d81ace6f301a2a446@43.153.55.134:30303,enode://c067356146268d2855ad356c1ce36ba9f78c1633a72f9b7f686679c2ffe04bab6d24e48ef6eefb0e01aa00dff5024f7f94bc583da90b6027f40be4129bbbc5fd@43.153.90.191:30303,enode://acc2bdb6416feddff9734bee1e6de91e684e9df5aeb1d36698cc78b920600aed36a2871e4ad0cf4521afcdc2cde8e2cd410a57038767c356d4ce6c69b9107a5a@170.106.109.12:30303,enode://eb5079aae185d5d8afa01bfd2d349da5b476609aced2b57c90142556cf0ee4a152bcdd724627a7de97adfc2a68af5742a8f58781366e6a857d4bde98de6fe986@34.66.210.65:30303,enode://2294f526cbb7faa778192289c252307420532191438ce821d3c50232e019a797bda8c8f8541de0847e953bb03096123856935e32294de9814d15d120131499ba@34.72.186.213:30303,enode://4964fa273909ebcd21f6d0de4d49a5af8ee8c7309bdf7c6e11c1ba7ad434624bcad986bff17bbbb69fa61555902232acaa78f988b15f0498bb1bc5db6c217f3b@65.108.233.73:30306,enode://d8ecf4ea776f05d6cce6b8b53ef966d3d3bed05691dfd457bb6045a7ed6d340fa0bb39b228197dcd2f8657745a72dbe6eed01d81e8616aa32cc0946e5fadae51@5.42.102.190:30306|" .env
 
 # 用户信息已配置完毕
 echo "用户信息已配置完毕。"
 
+# 升级所有已安装的包
+sudo apt upgrade -y
+
+# 安装基本组件
+sudo apt install pkg-config curl build-essential libssl-dev libclang-dev ufw docker-compose-plugin -y
+
+# 检查 Docker 是否已安装
+if ! command -v docker &> /dev/null
+then
+    # 如果 Docker 未安装，则进行安装
+    echo "未检测到 Docker，正在安装..."
+    sudo apt-get install ca-certificates curl gnupg lsb-release
+
+    # 添加 Docker 官方 GPG 密钥
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+    # 设置 Docker 仓库
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    # 授权 Docker 文件
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    sudo apt-get update
+
+    # 安装 Docker 最新版本
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
+else
+    echo "Docker 已安装。"
+fi
+
+
 # 运行 Taiko 节点
 docker compose --profile l2_execution_engine down
 docker stop simple-taiko-node-taiko_client_proposer-1 && docker rm simple-taiko-node-taiko_client_proposer-1
-docker compose --profile l2_execution_engine up -d
 docker compose --profile proposer up -d
 
 # 获取公网 IP 地址
@@ -184,7 +219,7 @@ read -p "请输入BlockPI holesky HTTP链接: " l1_endpoint_http
 
 read -p "请输入BlockPI holesky WS链接: " l1_endpoint_ws
 
-read -p "请输入Beacon Holskey RPC（如果你没有搭建的话，请输入:https://ethereum-holesky-beacon-api.publicnode.com/即可）链接: " l1_beacon_http
+read -p "请输入Beacon Holskey RPC（如果你没有搭建的话，请输入:http://195.201.170.121:5052或者http://188.40.51.249:5052即可）链接: " l1_beacon_http
 
 read -p "请输入Prover RPC 链接(目前可用任意选一个:http://kenz-prover.hekla.kzvn.xyz:9876或者http://hekla.stonemac65.xyz:9876): " prover_endpoints
 
@@ -209,7 +244,6 @@ sed -i "s|PROVER_ENDPOINTS=.*|PROVER_ENDPOINTS=${prover_endpoints}|" .env
 
 docker compose --profile l2_execution_engine down
 docker stop simple-taiko-node-taiko_client_proposer-1 && docker rm simple-taiko-node-taiko_client_proposer-1
-docker compose --profile l2_execution_engine up -d
 docker compose --profile proposer up -d
 
 }
@@ -224,7 +258,7 @@ sed -i "s|PROVER_ENDPOINTS=.*|PROVER_ENDPOINTS=${prover_endpoints}|" .env
 
 docker compose --profile l2_execution_engine down
 docker stop simple-taiko-node-taiko_client_proposer-1 && docker rm simple-taiko-node-taiko_client_proposer-1
-docker compose --profile l2_execution_engine up -d
+
 docker compose --profile proposer up -d
 
 }
@@ -233,8 +267,7 @@ docker compose --profile proposer up -d
 function delete_new() {
     cd #HOME
     cd simple-taiko-node
-    docker compose --profile l2_execution_engine down -v
-    docker stop simple-taiko-node-taiko_client_proposer-1 && docker rm simple-taiko-node-taiko_client_proposer-1
+    docker compose --profile proposer down -v
     cd #HOME
     rm -rf simple-taiko-node
 }
@@ -245,6 +278,35 @@ function delete_old() {
     docker compose down -v
     cd #HOME
     rm -rf simple-taiko-node
+}
+
+function update_beacon_bootnode() {
+    cd #HOME
+    cd simple-taiko-node
+    read -p "请输入Beacon Holskey RPC（如果你没有搭建的话，请输入:http://195.201.170.121:5052或者http://188.40.51.249:5052即可）链接: " l1_beacon_http
+    sed -i "s|BOOT_NODES=.*|BOOT_NODES=enode://0b310c7dcfcf45ef32dde60fec274af88d52c7f0fb6a7e038b14f5f7bb7d72f3ab96a59328270532a871db988a0bcf57aa9258fa8a80e8e553a7bb5abd77c40d@167.235.249.45:30303,enode://500a10f3a8cfe00689eb9d41331605bf5e746625ac356c24235ff66145c2de454d869563a71efb3d2fb4bc1c1053b84d0ab6deb0a4155e7227188e1a8457b152@85.10.202.253:30303,enode://0b310c7dcfcf45ef32dde60fec274af88d52c7f0fb6a7e038b14f5f7bb7d72f3ab96a59328270532a871db988a0bcf57aa9258fa8a80e8e553a7bb5abd77c40d@167.235.249.45:30303,enode://500a10f3a8cfe00689eb9d41331605bf5e746625ac356c24235ff66145c2de454d869563a71efb3d2fb4bc1c1053b84d0ab6deb0a4155e7227188e1a8457b152@85.10.202.253:30303|" .env
+    sed -i "s|L1_BEACON_HTTP=.*|L1_BEACON_HTTP=${l1_beacon_http}|" .env
+    docker compose --profile l2_execution_engine down -v
+    docker stop simple-taiko-node-taiko_client_proposer-1 && docker rm simple-taiko-node-taiko_client_proposer-1
+    docker compose --profile proposer up -d
+}
+
+
+function change_L1RPC() {
+cd #HOME
+cd simple-taiko-node
+
+read -p "请输入BlockPI holesky HTTP链接: " l1_endpoint_http
+
+read -p "请输入BlockPI holesky WS链接: " l1_endpoint_ws
+
+sed -i "s|L1_ENDPOINT_HTTP=.*|L1_ENDPOINT_HTTP=${l1_endpoint_http}|" .env
+sed -i "s|L1_ENDPOINT_WS=.*|L1_ENDPOINT_WS=${l1_endpoint_ws}|" .env
+
+docker compose --profile l2_execution_engine down
+docker stop simple-taiko-node-taiko_client_proposer-1 && docker rm simple-taiko-node-taiko_client_proposer-1
+docker compose --profile proposer up -d
+
 }
 
 # 主菜单
@@ -260,11 +322,14 @@ function main_menu() {
     echo "2. 查看节点日志"
     echo "3. 设置快捷键的功能"
     echo "4. 更改常规配置"
-    echo "5. 更换rpc"
+    echo "5. 更换prover rpc"
     echo "=======================卸载节点功能============================="
     echo "6. 卸载新测试网节点（所有数据清除）"
     echo "7. 卸载旧测试网节点（所有数据清除）"
-    read -p "请输入选项（1-3）: " OPTION
+    echo "=======================常规更新功能============================="
+    echo "8. 更新Beacon rpc和加速节点"
+    echo "9. 更换L1 holesky rpc"
+    read -p "请输入选项（1-8）: " OPTION
 
     case $OPTION in
     1) install_node ;;
@@ -274,6 +339,8 @@ function main_menu() {
     5) change_prover ;; 
     6) delete_new ;; 
     7) delete_old ;; 
+    8) update_beacon_bootnode ;; 
+    9) change_L1RPC ;;
     *) echo "无效选项。" ;;
     esac
 }
